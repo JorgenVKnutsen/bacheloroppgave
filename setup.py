@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
            "publisher_node = lw_data_collector.publisher:main",
-           "subscriber_node = lw_data_collector.subscriber:main"
+           "subscriber_node = lw_data_collector.subscriber:main",
+           "remote_control = lw_data_collector.remotecontrol:main"
         ],
     },
 )
