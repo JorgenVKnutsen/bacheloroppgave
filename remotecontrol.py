@@ -47,7 +47,10 @@ class RemoteController(Node):
          if self.speed_ > 0:
             self.speed_ -= 1
          if self.speed_ == 0:
-            self.brake_ = 50
+            self.brake_ = 20
+      if self.key == 'k':
+         self.speed_ = 0
+         self.brake_ = 20
 
       if self.key == 'q':
          rclpy.shutdown()
