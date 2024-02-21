@@ -14,6 +14,12 @@
   <depend>pandas</depend>
   <depend>datetime</depend>
   <depend>argparse</depend>
+  <depend>sys</depend>
+  <depend>select</depend>
+  <depend>termios</depend>
+  <depend>tty</depend>
+
+  
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
