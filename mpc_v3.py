@@ -44,7 +44,7 @@ class MPC_Controller:
       self.dt = 0.1
 
       #Prediction horizon
-      self.N = 10
+      self.N = 15
 
       # Initial state
       self.state = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])  # [x, y, psi, v, F, delta, delta_dot]
@@ -133,9 +133,9 @@ class MPC_Controller:
 
       self.throttle_state, self.steering_state = control_input
 
-      print(f"Step {0}, State: {self.state}, Control: {control_input}")
-      print(res.x)
-      print(control_input)
+      # print(f"Step {0}, State: {self.state}, Control: {control_input}")
+      # print(res.x)
+      # print(control_input)
       return control_input
 
 
