@@ -184,7 +184,7 @@ void timer_callback(rcl_timer_t* timer, int64_t last_call_time) {
 
 void error_loop() {
   while (1) {
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN)); //comment this
     delay(100);
   }
 }
@@ -196,8 +196,9 @@ void error_loop() {
 
 void setup() {
 
-  setupROS2();
-
+  if(digitalRead(!use_pu_control_pin)){
+    setupROS2();
+  }
   // -- Input --
   pinMode(emergency_stop_pin, INPUT);
   pinMode(rc_input_pin, INPUT);
