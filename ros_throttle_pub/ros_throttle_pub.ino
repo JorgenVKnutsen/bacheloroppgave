@@ -196,9 +196,9 @@ void error_loop() {
 
 void setup() {
 
-  if(digitalRead(!use_pu_control_pin)){
-    setupROS2();
-  }
+
+  setupROS2();
+
   // -- Input --
   pinMode(emergency_stop_pin, INPUT);
   pinMode(rc_input_pin, INPUT);
@@ -219,21 +219,35 @@ void setup() {
 void loop() {
 
   // Spin ROS node
+
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
   RCCHECK(rclc_executor_spin_some(&executor_pub, RCL_MS_TO_NS(10)));
 
+
+  u1_msg.data = throttle_output;  //This had to be u1_msg.data!
+  rcl_publish(&u1_publisher, &u1_msg, NULL);
+
+
+
   // ATV Emergency Stop is pressed
-  if (digitalRead(emergency_stop_pin)) {
+  if (digitalRead(emergency_stop_pin)) { //interrupt
 
     do {
       updateThrottle(min_throttle_output);
       updateBrakes(max_brake_output);
+      u1_msg.data = 777;  //This had to be u1_msg.data!
+      rcl_publish(&u1_publisher, &u1_msg, NULL);
     } while (digitalRead(emergency_stop_pin));  //Waits for brakes to reach max brake state
 
     setBrakeState(Brake::both, BrakeState::stay);  //Avoid brakes destroying ATV
 
-    while (true) {}
+    while (true) {
+      u1_msg.data = 666;  //This had to be u1_msg.data!
+      rcl_publish(&u1_publisher, &u1_msg, NULL);
+    }
   }
+
+
 
   // Checks if ATV should be controlled using RC or PU
   use_pu_control = digitalRead(use_pu_control_pin);
@@ -243,19 +257,21 @@ void loop() {
 
     rc_pwm_input = pulseIn(rc_input_pin, HIGH);
     rc_pwm_input = constrain(rc_pwm_input, min_pwm_input, max_pwm_input);
-    std_msgs__msg__Int64 u1_msg;
-    std_msgs__msg__Int64 u2_msg;
-    std_msgs__msg__Int64 u3_msg;
+    //   std_msgs__msg__Int64 u1_msg;
+    //   std_msgs__msg__Int64 u2_msg;
+    //   std_msgs__msg__Int64 u3_msg;
     if (rc_pwm_input > middle_pwm_input) {
       throttle_output = map(rc_pwm_input, middle_pwm_input, max_pwm_input, min_throttle_output, max_throttle_output);
       updateBrakes(min_brake_output);
       updateThrottle(throttle_output);
       u1_msg.data = throttle_output;  //This had to be u1_msg.data!
+      rcl_publish(&u1_publisher, &u1_msg, NULL);
     } else if (rc_pwm_input <= middle_pwm_input) {
       brake_output = map(rc_pwm_input, middle_pwm_input, min_pwm_input, min_brake_output, max_brake_output);
       updateThrottle(min_throttle_output);
       updateBrakes(brake_output);
       u2_msg.data = brake_output;
+      rcl_publish(&u2_publisher, &u2_msg, NULL);
     } else {
       updateThrottle(min_throttle_output);
       updateBrakes(max_brake_output);
@@ -279,8 +295,8 @@ void loop() {
 // ----- Functions -----
 
 /*
- * Sets up everything related to ROS2
- */
+   Sets up everything related to ROS2
+*/
 void setupROS2() {
   // Setup communication via micro-ROS
   set_microros_transports();
@@ -298,28 +314,37 @@ void setupROS2() {
   // ----- Initialise subscribers -----
   // -- Throttle --
   RCCHECK(rclc_subscription_init_default(
-    &throttle_subscriber,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64),
-    "lw_portenta_throttle_subscriber"));
+            &throttle_subscriber,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64),
+            "lw_portenta_throttle_subscriber"));
 
   // -- Brake --
   RCCHECK(rclc_subscription_init_default(
-    &brake_subscriber,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64),
-    "lw_portenta_brake_subscriber"));
+            &brake_subscriber,
+            &node,
+            ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64),
+            "lw_portenta_brake_subscriber"));
 
 
   // creating pubs
   // Initialisering av publishere
   rcl_ret_t rc1 = rclc_publisher_init_default(
-    &u1_publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64), u1_topic);
+                    &u1_publisher, &node,
+                    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64), u1_topic);
+
 
   rcl_ret_t rc2 = rclc_publisher_init_default(
-    &u2_publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64), u2_topic);
+                    &u2_publisher, &node,
+                    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int64), u2_topic);
+
+  const unsigned int timer_timeout = 10;
+  RCCHECK(rclc_timer_init_default(
+            &timer,
+            &support,
+            RCL_MS_TO_NS(timer_timeout),
+            timer_callback));
+
 
   // rcl_ret_t rc3 = rclc_publisher_init_default(
   //   &u3_publisher, &node,
@@ -328,12 +353,6 @@ void setupROS2() {
 
 
 
-  const unsigned int timer_timeout = 10;
-  RCCHECK(rclc_timer_init_default(
-    &timer,
-    &support,
-    RCL_MS_TO_NS(timer_timeout),
-    timer_callback));
 
   // Create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, number_of_handles, &allocator));
