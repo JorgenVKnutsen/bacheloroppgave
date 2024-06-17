@@ -77,6 +77,8 @@ rclc_support_t support;
 rclc_executor_t executor_pub;
 rcl_timer_t timer;
 
+
+
 // ---------- Node ----------
 rcl_node_t node;
 const char * node_name = "lw_steering_portenta_node";
@@ -97,7 +99,7 @@ void steering_subscriber_callback(const void* steering_msg) {
 
 rcl_publisher_t u3_publisher;
 const char* u3_topic = "lw_portenta_steering_input";
-int64_t u3_msg;
+std_msgs__msg__Int64 u3_msg;
 
 void timer_callback(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
@@ -155,6 +157,9 @@ void loop(){
     RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));                                          // Get input
     pu_steering_input = constrain(pu_steering_input, pu_min_steering_input, pu_max_steering_input);         // Constrain input
     steering_setpoint = inputToFestoAngle(pu_steering_input, pu_min_steering_input, pu_max_steering_input); // Map input
+    
+    u3_msg.data = steering_setpoint; 
+    rcl_publish(&u3_publisher, &u3_msg, NULL);
   }
 
   // ATV controlled using RC
